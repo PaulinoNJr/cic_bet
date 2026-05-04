@@ -1,0 +1,9 @@
+.next
+node_modules
+.vercel
+config.local.js
+.env
+.env.local
+coverage
+dist
+*.log

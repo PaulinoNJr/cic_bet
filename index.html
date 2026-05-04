@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CIC Bet Arena</title>
+    <meta
+      name="description"
+      content="Pagina unica para gamificacao de apostas internas com Supabase e deploy simples no Vercel."
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero-card">
+        <div class="hero-copy">
+          <span class="eyebrow">CICPoints + Supabase + Vercel</span>
+          <h1>CIC Bet Arena em uma pagina so</h1>
+          <p>
+            Cadastro de colaboradores, criacao de apostas, combos, ranking e definicao manual de resultados em uma SPA
+            simples feita com HTML, CSS e JavaScript.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-link" href="#bets-section">Explorar apostas</a>
+            <a class="secondary-link" href="#supabase-section">Configurar Supabase</a>
+          </div>
+        </div>
+        <div class="hero-side">
+          <div class="mini-stat">
+            <span>Arquitetura</span>
+            <strong>SPA estatica</strong>
+          </div>
+          <div class="mini-stat">
+            <span>Banco</span>
+            <strong>Supabase</strong>
+          </div>
+          <div class="mini-stat">
+            <span>Deploy</span>
+            <strong>Vercel</strong>
+          </div>
+        </div>
+      </header>
+
+      <div id="config-alert" class="alert hidden"></div>
+      <div id="global-feedback" class="alert subtle hidden"></div>
+
+      <nav class="top-nav">
+        <a href="#overview-section">Visao geral</a>
+        <a href="#auth-section">Entrar</a>
+        <a href="#bets-section">Apostas</a>
+        <a href="#combo-section">Combos</a>
+        <a href="#ranking-section">Ranking</a>
+        <a href="#admin-section">Admin</a>
+        <button id="theme-toggle" type="button">Alternar tema</button>
+      </nav>
+
+      <section id="overview-section" class="section-block">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Painel</span>
+            <h2>Resumo do jogo</h2>
+          </div>
+          <button id="refresh-button" class="ghost-button" type="button">Atualizar dados</button>
+        </div>
+        <div id="summary-grid" class="summary-grid"></div>
+        <div class="layout-two">
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Sessao atual</h3>
+              <button id="logout-button" class="ghost-button hidden" type="button">Sair</button>
+            </div>
+            <div id="session-card" class="session-card"></div>
+          </article>
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Historico recente</h3>
+            </div>
+            <div id="activity-feed" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="auth-section" class="section-block">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Acesso</span>
+            <h2>Entrar ou criar perfil</h2>
+          </div>
+        </div>
+        <div class="layout-two">
+          <article class="panel-card">
+            <div class="mode-switch">
+              <button class="mode-button active" data-auth-mode="login" type="button">Entrar</button>
+              <button class="mode-button" data-auth-mode="register" type="button">Cadastrar</button>
+            </div>
+            <form id="auth-form" class="form-grid">
+              <label>
+                <span>Nome</span>
+                <input id="auth-name" type="text" placeholder="Seu nome" />
+              </label>
+              <label>
+                <span>Email</span>
+                <input id="auth-email" type="email" placeholder="voce@empresa.com" required />
+              </label>
+              <label id="character-field">
+                <span>Personagem</span>
+                <select id="auth-character"></select>
+              </label>
+              <label id="balance-field">
+                <span>Saldo inicial</span>
+                <input id="auth-balance" type="number" min="100" max="10000" value="1000" />
+              </label>
+              <div id="avatar-field" class="avatar-picker"></div>
+              <button id="auth-submit" class="primary-button" type="submit">Entrar na arena</button>
+            </form>
+          </article>
+
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Personagens disponiveis</h3>
+            </div>
+            <div id="characters-gallery" class="characters-grid"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="bets-section" class="section-block">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Mercado</span>
+            <h2>Todas as apostas</h2>
+          </div>
+        </div>
+        <div class="layout-two">
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Eventos ativos e encerrados</h3>
+            </div>
+            <div id="bets-list" class="bets-list"></div>
+          </article>
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Criar nova aposta</h3>
+            </div>
+            <form id="bet-form" class="form-grid">
+              <label>
+                <span>Titulo</span>
+                <input id="bet-title" type="text" placeholder="Ex: Quem ganha o quiz mensal?" required />
+              </label>
+              <label>
+                <span>Encerramento</span>
+                <input id="bet-closes-at" type="datetime-local" required />
+              </label>
+              <label class="full-width">
+                <span>Descricao</span>
+                <textarea id="bet-description" rows="4" placeholder="Contexto da aposta"></textarea>
+              </label>
+              <label>
+                <span>Multiplicador base</span>
+                <input id="bet-multiplier" type="number" min="1.1" max="10" step="0.1" value="1.6" />
+              </label>
+              <label>
+                <span>Risco x retorno</span>
+                <select id="bet-risk-level">
+                  <option value="low">Baixo</option>
+                  <option value="medium" selected>Medio</option>
+                  <option value="high">Alto</option>
+                </select>
+              </label>
+              <label class="full-width">
+                <span>Opcoes</span>
+                <textarea
+                  id="bet-options"
+                  rows="5"
+                  placeholder="Uma opcao por linha no formato: Nome da opcao|1.80"
+                >Time Orion|1.55
+Time Vega|1.75
+Empate tecnico|2.20</textarea>
+              </label>
+              <button class="primary-button" type="submit">Criar aposta</button>
+            </form>
+          </article>
+        </div>
+      </section>
+
+      <section id="combo-section" class="section-block">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Combos</span>
+            <h2>Monte apostas combinadas</h2>
+          </div>
+        </div>
+        <div class="layout-two">
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Builder de combo</h3>
+            </div>
+            <form id="combo-form" class="form-grid">
+              <label>
+                <span>Stake do combo</span>
+                <input id="combo-stake" type="number" min="10" value="80" />
+              </label>
+              <div id="combo-builder" class="combo-builder full-width"></div>
+              <div id="combo-preview" class="info-box full-width"></div>
+              <button class="primary-button" type="submit">Registrar combo</button>
+            </form>
+          </article>
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Combos recentes</h3>
+            </div>
+            <div id="combo-history" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="ranking-section" class="section-block">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Competicao</span>
+            <h2>Ranking e desempenho</h2>
+          </div>
+        </div>
+        <div class="layout-two">
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Ranking por apostador</h3>
+            </div>
+            <div id="players-ranking" class="table-shell"></div>
+          </article>
+          <article class="panel-card">
+            <div class="panel-head">
+              <h3>Ranking por aposta</h3>
+            </div>
+            <div id="bets-ranking" class="table-shell"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="admin-section" class="section-block">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Admin</span>
+            <h2>Definicao manual de resultados</h2>
+          </div>
+        </div>
+        <article class="panel-card">
+          <div id="admin-panel" class="admin-panel"></div>
+        </article>
+      </section>
+
+      <section id="supabase-section" class="section-block">
+        <div class="section-heading">
+          <div>
+            <span class="eyebrow">Infra</span>
+            <h2>Supabase + Vercel</h2>
+          </div>
+        </div>
+        <article class="panel-card">
+          <ol class="setup-list">
+            <li>Crie um projeto no Supabase e rode o SQL de <code>supabase/schema.sql</code>.</li>
+            <li>Cadastre no Vercel as envs <code>SUPABASE_URL</code>, <code>SUPABASE_ANON_KEY</code> e <code>ADMIN_EMAILS</code>.</li>
+            <li>Faça deploy desta pasta no Vercel. A pagina usa <code>/api/config</code> para ler as envs em runtime.</li>
+          </ol>
+        </article>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

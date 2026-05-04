@@ -1,0 +1,10 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="420" rx="36" fill="#431407"/>
+  <circle cx="482" cy="112" r="96" fill="#FB923C" fill-opacity="0.24"/>
+  <path d="M208 342C208 279.039 259.039 228 322 228V228C384.961 228 436 279.039 436 342V346H208V342Z" fill="#FFF7ED"/>
+  <circle cx="320" cy="146" r="74" fill="#FED7AA"/>
+  <path d="M244 132L276 80L304 126" fill="#7C2D12"/>
+  <path d="M396 132L364 80L336 126" fill="#7C2D12"/>
+  <text x="48" y="66" fill="#FFF7ED" font-family="Arial, sans-serif" font-size="34" font-weight="700">Nova Lynx</text>
+  <text x="48" y="100" fill="#FDBA74" font-family="Arial, sans-serif" font-size="18">Velocidade e instinto competitivo</text>
+</svg>

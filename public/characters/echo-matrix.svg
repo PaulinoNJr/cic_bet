@@ -1,0 +1,9 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="420" rx="36" fill="#2E1065"/>
+  <circle cx="320" cy="210" r="164" fill="#A855F7" fill-opacity="0.14"/>
+  <path d="M184 332C184 274.562 230.562 228 288 228H352C409.438 228 456 274.562 456 332V348H184V332Z" fill="#F5F3FF"/>
+  <circle cx="320" cy="146" r="74" fill="#EDE9FE"/>
+  <path d="M236 146H404" stroke="#7C3AED" stroke-width="18" stroke-linecap="round" stroke-dasharray="10 14"/>
+  <text x="48" y="66" fill="#F5F3FF" font-family="Arial, sans-serif" font-size="34" font-weight="700">Echo Matrix</text>
+  <text x="48" y="100" fill="#C4B5FD" font-family="Arial, sans-serif" font-size="18">Padroes escondidos viram vantagem</text>
+</svg>

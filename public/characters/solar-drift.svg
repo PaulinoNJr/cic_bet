@@ -1,0 +1,9 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="420" rx="36" fill="#422006"/>
+  <circle cx="484" cy="108" r="90" fill="#FACC15" fill-opacity="0.28"/>
+  <path d="M188 338C188 275.592 238.592 225 301 225H339C401.408 225 452 275.592 452 338V348H188V338Z" fill="#FEFCE8"/>
+  <circle cx="320" cy="146" r="74" fill="#FEF9C3"/>
+  <path d="M320 62L336 108L384 108L346 138L360 184L320 156L280 184L294 138L256 108L304 108L320 62Z" fill="#EAB308"/>
+  <text x="48" y="66" fill="#FEFCE8" font-family="Arial, sans-serif" font-size="34" font-weight="700">Solar Drift</text>
+  <text x="48" y="100" fill="#FDE047" font-family="Arial, sans-serif" font-size="18">Risco alto com leitura estrategica</text>
+</svg>

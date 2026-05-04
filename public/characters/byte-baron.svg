@@ -1,0 +1,10 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="420" rx="36" fill="#062C30"/>
+  <rect x="54" y="54" width="532" height="312" rx="28" fill="#0F766E" fill-opacity="0.28"/>
+  <circle cx="320" cy="150" r="68" fill="#CCFBF1"/>
+  <path d="M234 320C234 267.533 276.533 225 329 225H329C381.467 225 424 267.533 424 320V344H234V320Z" fill="#E6FFFB"/>
+  <path d="M252 120H388" stroke="#14B8A6" stroke-width="18" stroke-linecap="round"/>
+  <path d="M320 78V162" stroke="#0F172A" stroke-width="16" stroke-linecap="round"/>
+  <text x="48" y="66" fill="#ECFEFF" font-family="Arial, sans-serif" font-size="34" font-weight="700">Byte Baron</text>
+  <text x="48" y="100" fill="#99F6E4" font-family="Arial, sans-serif" font-size="18">Estatistica com sangue frio</text>
+</svg>

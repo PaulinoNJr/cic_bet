@@ -1,0 +1,10 @@
+<svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="640" height="420" rx="36" fill="#0F172A"/>
+  <circle cx="483" cy="96" r="86" fill="#14B8A6" fill-opacity="0.24"/>
+  <circle cx="160" cy="320" r="120" fill="#2DD4BF" fill-opacity="0.18"/>
+  <path d="M122 292C122 235.667 167.667 190 224 190H320C376.333 190 422 235.667 422 292V336H122V292Z" fill="#E2E8F0"/>
+  <circle cx="272" cy="146" r="66" fill="#F8FAFC"/>
+  <path d="M206 146C206 109.549 235.549 80 272 80V80C308.451 80 338 109.549 338 146V146H206V146Z" fill="#14B8A6"/>
+  <text x="48" y="66" fill="#F8FAFC" font-family="Arial, sans-serif" font-size="34" font-weight="700">Aurora Pulse</text>
+  <text x="48" y="100" fill="#94A3B8" font-family="Arial, sans-serif" font-size="18">Leitura rapida e energia constante</text>
+</svg>
