@@ -1,9 +1,27 @@
 <svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="640" height="420" rx="36" fill="#2E1065"/>
-  <circle cx="320" cy="210" r="164" fill="#A855F7" fill-opacity="0.14"/>
-  <path d="M184 332C184 274.562 230.562 228 288 228H352C409.438 228 456 274.562 456 332V348H184V332Z" fill="#F5F3FF"/>
-  <circle cx="320" cy="146" r="74" fill="#EDE9FE"/>
-  <path d="M236 146H404" stroke="#7C3AED" stroke-width="18" stroke-linecap="round" stroke-dasharray="10 14"/>
-  <text x="48" y="66" fill="#F5F3FF" font-family="Arial, sans-serif" font-size="34" font-weight="700">Echo Matrix</text>
-  <text x="48" y="100" fill="#C4B5FD" font-family="Arial, sans-serif" font-size="18">Padroes escondidos viram vantagem</text>
+  <defs>
+    <linearGradient id="echo-bg" x1="80" y1="42" x2="566" y2="388" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#22103C"/>
+      <stop offset="1" stop-color="#5B21B6"/>
+    </linearGradient>
+    <linearGradient id="echo-coat" x1="204" y1="220" x2="442" y2="368" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F5F3FF"/>
+      <stop offset="1" stop-color="#DDD6FE"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="36" fill="url(#echo-bg)"/>
+  <circle cx="516" cy="94" r="108" fill="#A78BFA" fill-opacity="0.26"/>
+  <path d="M134 320C200 290 262 274 320 274C388 274 450 292 510 330" stroke="#C4B5FD" stroke-opacity="0.24" stroke-width="9" stroke-linecap="round"/>
+  <path d="M198 344C198 277.726 251.726 224 318 224H338C404.274 224 458 277.726 458 344V356H198V344Z" fill="url(#echo-coat)"/>
+  <circle cx="320" cy="144" r="72" fill="#FAF5FF"/>
+  <path d="M252 128C264 86 300 58 344 58C377 58 406 74 422 102L394 124C378 108 358 100 336 100C300 100 272 112 252 128Z" fill="#8B5CF6"/>
+  <path d="M238 154L290 120L320 154L350 120L404 154" stroke="#C4B5FD" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="290" cy="156" r="9" fill="#4C1D95"/>
+  <circle cx="350" cy="156" r="9" fill="#4C1D95"/>
+  <path d="M298 186C305 191.333 312.333 194 320 194C327.667 194 335 191.333 342 186" stroke="#6D28D9" stroke-width="6" stroke-linecap="round"/>
+  <rect x="438" y="242" width="76" height="76" rx="16" stroke="#DDD6FE" stroke-opacity="0.34" stroke-width="3"/>
+  <path d="M456 268H496" stroke="#DDD6FE" stroke-width="5" stroke-linecap="round"/>
+  <path d="M476 248V288" stroke="#DDD6FE" stroke-width="5" stroke-linecap="round"/>
+  <text x="46" y="64" fill="#F5F3FF" font-family="Bahnschrift, Arial, sans-serif" font-size="34" font-weight="700">Echo Matrix X</text>
+  <text x="46" y="98" fill="#C4B5FD" font-family="Arial, sans-serif" font-size="18">caçadora de sinais ocultos</text>
 </svg>

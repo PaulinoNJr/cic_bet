@@ -1,23 +1,20 @@
 (function () {
-  const { createClient } = window.supabase;
-
   const avatarOptions = [
-    "/public/avatars/avatar-01.svg",
-    "/public/avatars/avatar-02.svg",
-    "/public/avatars/avatar-03.svg",
-    "/public/avatars/avatar-04.svg",
-    "/public/avatars/avatar-05.svg",
-    "/public/avatars/avatar-06.svg"
+    "/avatars/avatar-01.svg",
+    "/avatars/avatar-02.svg",
+    "/avatars/avatar-03.svg",
+    "/avatars/avatar-04.svg",
+    "/avatars/avatar-05.svg",
+    "/avatars/avatar-06.svg"
   ];
-
-  const riskMultipliers = {
-    low: 1.12,
-    medium: 1.35,
-    high: 1.7
-  };
+  const avatarUploadTypes = new Set(["image/png", "image/jpeg", "image/webp", "image/gif"]);
+  const maxAvatarUploadSize = 5 * 1024 * 1024;
+  const avatarOutputSize = 220;
+  const avatarOutputQuality = 0.84;
+  const maxAvatarDataUrlLength = 320000;
+  const themeStorageKey = "cicbet.theme";
 
   const state = {
-    supabase: null,
     config: null,
     session: loadSession(),
     users: [],
@@ -27,161 +24,911 @@
     predictions: [],
     combos: [],
     comboLegs: [],
-    authMode: "login"
+    currentView: resolveInitialView(),
+    theme: loadThemePreference()
   };
 
   const dom = {
     configAlert: document.getElementById("config-alert"),
     globalFeedback: document.getElementById("global-feedback"),
+    adminBetsNav: document.getElementById("admin-bets-nav"),
+    adminResolveNav: document.getElementById("admin-resolve-nav"),
+    betsNav: document.getElementById("bets-nav"),
+    registerNav: document.getElementById("register-nav"),
+    themeToggleButton: document.getElementById("theme-toggle-button"),
+    loginNav: document.getElementById("login-nav"),
+    logoutButton: document.getElementById("logout-button"),
     summaryGrid: document.getElementById("summary-grid"),
-    sessionCard: document.getElementById("session-card"),
-    activityFeed: document.getElementById("activity-feed"),
-    charactersGallery: document.getElementById("characters-gallery"),
-    authForm: document.getElementById("auth-form"),
-    authName: document.getElementById("auth-name"),
-    authEmail: document.getElementById("auth-email"),
-    authCharacter: document.getElementById("auth-character"),
-    authBalance: document.getElementById("auth-balance"),
-    authSubmit: document.getElementById("auth-submit"),
-    characterField: document.getElementById("character-field"),
-    balanceField: document.getElementById("balance-field"),
-    avatarField: document.getElementById("avatar-field"),
-    betForm: document.getElementById("bet-form"),
-    betsList: document.getElementById("bets-list"),
-    comboForm: document.getElementById("combo-form"),
-    comboBuilder: document.getElementById("combo-builder"),
-    comboPreview: document.getElementById("combo-preview"),
-    comboHistory: document.getElementById("combo-history"),
+    homeBetsList: document.getElementById("home-bets-list"),
     playersRanking: document.getElementById("players-ranking"),
     betsRanking: document.getElementById("bets-ranking"),
-    adminPanel: document.getElementById("admin-panel"),
-    refreshButton: document.getElementById("refresh-button"),
-    logoutButton: document.getElementById("logout-button"),
-    themeToggle: document.getElementById("theme-toggle")
+    loginForm: document.getElementById("login-form"),
+    loginEmail: document.getElementById("login-email"),
+    loginPassword: document.getElementById("login-password"),
+    registerForm: document.getElementById("register-form"),
+    registerName: document.getElementById("register-name"),
+    registerEmail: document.getElementById("register-email"),
+    registerPassword: document.getElementById("register-password"),
+    registerPasswordConfirm: document.getElementById("register-password-confirm"),
+    registerCharacter: document.getElementById("register-character"),
+    registerBalance: document.getElementById("register-balance"),
+    avatarPicker: document.getElementById("avatar-picker"),
+    registerAvatarUpload: document.getElementById("register-avatar-upload"),
+    avatarUploadButton: document.getElementById("avatar-upload-button"),
+    avatarResetButton: document.getElementById("avatar-reset-button"),
+    avatarUploadHint: document.getElementById("avatar-upload-hint"),
+    charactersGallery: document.getElementById("characters-gallery"),
+    bettingSessionCard: document.getElementById("betting-session-card"),
+    betEntryList: document.getElementById("bet-entry-list"),
+    adminBetsAccess: document.getElementById("admin-bets-access"),
+    adminBetsDeleteList: document.getElementById("admin-bets-delete-list"),
+    adminResolveList: document.getElementById("admin-resolve-list"),
+    adminBetForm: document.getElementById("admin-bet-form"),
+    betTitle: document.getElementById("bet-title"),
+    betClosesAt: document.getElementById("bet-closes-at"),
+    betDescription: document.getElementById("bet-description"),
+    betMultiplier: document.getElementById("bet-multiplier"),
+    navLinks: Array.from(document.querySelectorAll("[data-view-target]")),
+    viewPanels: Array.from(document.querySelectorAll("[data-view]"))
   };
 
   let selectedAvatar = avatarOptions[0];
 
+  applyTheme(state.theme, false);
   bindEvents();
+  setActiveView(state.currentView);
   init();
 
   async function init() {
-    setFeedback("Conectando com a configuracao do projeto...", "subtle");
+    setFeedback("Carregando dados do banco SQLite local...", "info");
 
     try {
-      state.config = await loadRuntimeConfig();
-      validateConfig(state.config);
-      state.supabase = createClient(state.config.supabaseUrl, state.config.supabaseAnonKey);
+      state.config = await fetchJson("/api/config");
       await refreshData();
-      setFeedback("Dados carregados com sucesso.", "success", true);
+      setFeedback("Dados carregados com sucesso no SQLite.", "success", true);
     } catch (error) {
       console.error(error);
-      showConfigError(
-        "Nao foi possivel inicializar a pagina. Configure SUPABASE_URL e SUPABASE_ANON_KEY no Vercel e use o SQL de supabase/schema.sql."
-      );
+      showConfigError(error.message || "Nao foi possivel iniciar a aplicacao local.");
+      clearFeedback();
     }
   }
 
   function bindEvents() {
-    document.querySelectorAll("[data-auth-mode]").forEach((button) => {
+    dom.navLinks.forEach((button) => {
       button.addEventListener("click", () => {
-        state.authMode = button.dataset.authMode;
-        document.querySelectorAll("[data-auth-mode]").forEach((item) => item.classList.remove("active"));
-        button.classList.add("active");
-        renderAuthMode();
+        setActiveView(button.dataset.viewTarget);
       });
     });
 
-    dom.authForm.addEventListener("submit", handleAuthSubmit);
-    dom.betForm.addEventListener("submit", handleBetSubmit);
-    dom.comboForm.addEventListener("submit", handleComboSubmit);
-    dom.betsList.addEventListener("submit", handleBetEntrySubmit);
-    dom.adminPanel.addEventListener("submit", handleResolveSubmit);
-    dom.refreshButton.addEventListener("click", refreshData);
     dom.logoutButton.addEventListener("click", logout);
-    dom.themeToggle.addEventListener("click", toggleTheme);
-    dom.comboBuilder.addEventListener("change", renderComboPreview);
-  }
-
-  function toggleTheme() {
-    const html = document.documentElement;
-    const nextTheme = html.getAttribute("data-theme") === "dark" ? "light" : "dark";
-    html.setAttribute("data-theme", nextTheme);
-    localStorage.setItem("cicbet.theme", nextTheme);
-  }
-
-  function applyTheme() {
-    const savedTheme = localStorage.getItem("cicbet.theme");
-    if (savedTheme) {
-      document.documentElement.setAttribute("data-theme", savedTheme);
-    }
-  }
-
-  async function loadRuntimeConfig() {
-    applyTheme();
-    const response = await fetch("/api/config");
-    if (!response.ok) {
-      throw new Error("Falha ao carregar configuracao.");
-    }
-    return response.json();
-  }
-
-  function validateConfig(config) {
-    if (!config.supabaseUrl || !config.supabaseAnonKey) {
-      throw new Error("Configuracao do Supabase ausente.");
-    }
+    dom.themeToggleButton.addEventListener("click", toggleTheme);
+    dom.loginForm.addEventListener("submit", handleLoginSubmit);
+    dom.registerForm.addEventListener("submit", handleRegisterSubmit);
+    dom.registerAvatarUpload.addEventListener("change", handleAvatarUploadChange);
+    dom.avatarUploadButton.addEventListener("click", () => {
+      dom.registerAvatarUpload.click();
+    });
+    dom.avatarResetButton.addEventListener("click", () => {
+      resetAvatarSelection();
+    });
+    dom.betEntryList.addEventListener("submit", handleBetEntrySubmit);
+    dom.adminBetForm.addEventListener("submit", handleAdminBetSubmit);
+    dom.adminBetsDeleteList.addEventListener("submit", handleAdminBetDelete);
+    dom.adminResolveList.addEventListener("submit", handleAdminResolveSubmit);
+    window.addEventListener("hashchange", () => {
+      setActiveView(resolveInitialView());
+    });
   }
 
   async function refreshData() {
-    if (!state.supabase) {
+    setFeedback("Atualizando dados do banco SQLite local...", "info");
+
+    try {
+      const data = await fetchJson("/api/bootstrap");
+      state.characters = data.characters || [];
+      state.users = data.users || [];
+      state.bets = data.bets || [];
+      state.betOptions = data.betOptions || [];
+      state.predictions = data.predictions || [];
+      state.combos = data.combos || [];
+      state.comboLegs = data.comboLegs || [];
+      syncSessionUser();
+      renderAll();
+    } catch (error) {
+      clearFeedback();
+      throw new Error("Nao foi possivel carregar os dados do banco SQLite local. Verifique o caminho em SQLITE_PATH e as permissoes de escrita.");
+    }
+  }
+
+  function renderAll() {
+    renderSessionNav();
+    renderSummary();
+    renderHomeBets();
+    renderPlayersRanking();
+    renderBetsRanking();
+    renderCharacterOptions();
+    renderAvatarPicker();
+    renderCharactersGallery();
+    renderBettingSessionCard();
+    renderBetEntryList();
+    renderAdminBetAccess();
+    renderAdminBetDeleteList();
+    renderAdminResolveList();
+  }
+
+  function renderSessionNav() {
+    const currentUser = getCurrentUser();
+    const isLoggedIn = Boolean(currentUser);
+
+    dom.betsNav.classList.toggle("hidden", !isLoggedIn);
+    dom.registerNav.classList.toggle("hidden", isLoggedIn);
+    dom.loginNav.classList.toggle("hidden", isLoggedIn);
+    dom.logoutButton.classList.toggle("hidden", !isLoggedIn);
+    renderThemeToggleButton();
+  }
+
+  function renderSummary() {
+    const openBets = getOpenBets();
+    const totalVolume = state.predictions.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+    const leader = getLeaderboardRows()[0];
+    const currentUser = getCurrentUser();
+    const currentStats = currentUser ? getUserStats(currentUser) : null;
+
+    const items = [
+      {
+        label: "Apostas ativas",
+        value: String(openBets.length),
+        helper: "Mercados ainda abertos para entrada"
+      },
+      {
+        label: "Jogadores",
+        value: String(state.users.length),
+        helper: "Cadastros salvos no banco"
+      },
+      {
+        label: "Volume apostado",
+        value: `${formatPoints(totalVolume)} pts`,
+        helper: "Soma das apostas registradas"
+      },
+      {
+        label: currentUser ? "Meu saldo" : "Lider atual",
+        value: currentUser ? `${formatPoints(currentStats.balance)} pts` : escapeHtml(leader?.user.name || "Sem dados"),
+        helper: currentUser
+          ? "Atualizado com base nas suas entradas"
+          : leader
+            ? `${formatPoints(leader.stats.balance)} pts acumulados`
+            : "Ainda nao ha jogadores no ranking"
+      }
+    ];
+
+    dom.summaryGrid.innerHTML = items
+      .map(
+        (item) => `
+          <article class="summary-card">
+            <span>${escapeHtml(item.label)}</span>
+            <strong>${escapeHtml(item.value)}</strong>
+            <small>${escapeHtml(item.helper)}</small>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  function renderHomeBets() {
+    const featuredBets = state.bets
+      .filter((bet) => bet.status !== "cancelled")
+      .sort((a, b) => {
+        const aOpen = a.status === "open" ? 1 : 0;
+        const bOpen = b.status === "open" ? 1 : 0;
+
+        if (aOpen !== bOpen) {
+          return bOpen - aOpen;
+        }
+
+        return new Date(b.closes_at) - new Date(a.closes_at);
+      });
+
+    if (!featuredBets.length) {
+      dom.homeBetsList.innerHTML = emptyState("Nenhuma aposta cadastrada no momento.");
       return;
     }
 
-    setFeedback("Atualizando dados do Supabase...", "subtle");
+    dom.homeBetsList.innerHTML = featuredBets
+      .slice(0, 8)
+      .map((bet) => {
+        const totalEntries = getPredictionsForBet(bet.id).length;
+        const status = getBetStatusLabel(bet);
+        const winnerNames = getWinningUserNamesForBet(bet.id);
+        return `
+          <article class="bet-card compact">
+            <div class="bet-card-top">
+              <div>
+                <span class="chip ${escapeHtml(status.className)}">${escapeHtml(status.label)}</span>
+                <h3>${escapeHtml(bet.title)}</h3>
+              </div>
+              <strong class="odds-badge">${Number(bet.base_multiplier).toFixed(2)}x</strong>
+            </div>
+            <p>${escapeHtml(bet.description || "Sem descricao cadastrada.")}</p>
+            <div class="bet-meta">
+              <span>${bet.status === "settled" ? "Resolvida em" : "Fecha em"} ${escapeHtml(formatDateTime(bet.closes_at))}</span>
+              <span>${totalEntries} entrada(s)</span>
+              ${
+                bet.status === "settled"
+                  ? `<span>${
+                      winnerNames.length
+                        ? `${winnerNames.length > 1 ? "Ganhadores" : "Ganhador"}: ${escapeHtml(winnerNames.join(", "))}`
+                        : "Sem vencedor registrado"
+                    }</span>`
+                  : ""
+              }
+            </div>
+          </article>
+        `;
+      })
+      .join("");
+  }
 
-    const [
-      charactersResult,
-      usersResult,
-      betsResult,
-      optionsResult,
-      predictionsResult,
-      combosResult,
-      comboLegsResult
-    ] = await Promise.all([
-      state.supabase.from("characters").select("*").order("sort_order", { ascending: true }),
-      state.supabase.from("users").select("*").order("created_at", { ascending: true }),
-      state.supabase.from("bets").select("*").order("created_at", { ascending: false }),
-      state.supabase.from("bet_options").select("*").order("sort_order", { ascending: true }),
-      state.supabase.from("predictions").select("*").order("created_at", { ascending: false }),
-      state.supabase.from("combos").select("*").order("created_at", { ascending: false }),
-      state.supabase.from("combo_legs").select("*").order("created_at", { ascending: true })
-    ]);
+  function renderPlayersRanking() {
+    const rows = getLeaderboardRows();
 
-    const results = [
-      charactersResult,
-      usersResult,
-      betsResult,
-      optionsResult,
-      predictionsResult,
-      combosResult,
-      comboLegsResult
-    ];
-
-    const firstError = results.find((item) => item.error)?.error;
-    if (firstError) {
-      throw firstError;
+    if (!rows.length) {
+      dom.playersRanking.innerHTML = emptyState("Sem jogadores cadastrados.");
+      return;
     }
 
-    state.characters = charactersResult.data || [];
-    state.users = usersResult.data || [];
-    state.bets = betsResult.data || [];
-    state.betOptions = optionsResult.data || [];
-    state.predictions = predictionsResult.data || [];
-    state.combos = combosResult.data || [];
-    state.comboLegs = comboLegsResult.data || [];
+    dom.playersRanking.innerHTML = `
+      <div class="table-head players">
+        <span>#</span>
+        <span>Jogador</span>
+        <span>Personagem</span>
+        <span>Saldo</span>
+      </div>
+      ${rows
+        .slice(0, 10)
+        .map((row, index) => {
+          return `
+            <div class="table-row players">
+              <span>${index + 1}</span>
+              <div>
+                <strong>${escapeHtml(row.user.name)}</strong>
+                <small>${escapeHtml(row.user.email)}</small>
+              </div>
+              <span>${escapeHtml(row.character?.name || "-")}</span>
+              <span>${formatPoints(row.stats.balance)} pts</span>
+            </div>
+          `;
+        })
+        .join("")}
+    `;
+  }
 
-    syncSessionUser();
-    renderAll();
+  function renderBetsRanking() {
+    const rows = state.bets
+      .map((bet) => {
+        const entries = getPredictionsForBet(bet.id);
+        const volume = entries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+        return {
+          bet,
+          entries: entries.length,
+          volume
+        };
+      })
+      .sort((a, b) => b.volume - a.volume);
+
+    if (!rows.length) {
+      dom.betsRanking.innerHTML = emptyState("Sem apostas registradas.");
+      return;
+    }
+
+    dom.betsRanking.innerHTML = `
+      <div class="table-head bets">
+        <span>#</span>
+        <span>Aposta</span>
+        <span>Status</span>
+        <span>Volume</span>
+      </div>
+      ${rows
+        .slice(0, 10)
+        .map((row, index) => {
+          const status = getBetStatusLabel(row.bet);
+          return `
+            <div class="table-row bets">
+              <span>${index + 1}</span>
+              <div>
+                <strong>${escapeHtml(row.bet.title)}</strong>
+                <small>${row.entries} entrada(s)</small>
+              </div>
+              <span class="chip ${status.className}">${escapeHtml(status.label)}</span>
+              <span>${formatPoints(row.volume)} pts</span>
+            </div>
+          `;
+        })
+        .join("")}
+    `;
+  }
+
+  function renderCharacterOptions() {
+    if (!state.characters.length) {
+      dom.registerCharacter.innerHTML = `<option value="">Nenhum personagem carregado</option>`;
+      dom.registerCharacter.disabled = true;
+      return;
+    }
+
+    dom.registerCharacter.disabled = false;
+    dom.registerCharacter.innerHTML = state.characters
+      .map((character) => `<option value="${escapeHtml(character.id)}">${escapeHtml(character.name)}</option>`)
+      .join("");
+  }
+
+  function renderAvatarPicker() {
+    const customSelected = isCustomAvatar(selectedAvatar);
+    dom.avatarPicker.innerHTML = [
+      ...avatarOptions.map((avatar) => {
+        const activeClass = avatar === selectedAvatar ? "active" : "";
+        return `
+          <button class="avatar-option ${activeClass}" type="button" data-avatar="${escapeHtml(avatar)}">
+            <img src="${escapeHtml(avatar)}" alt="Avatar da arena" />
+          </button>
+        `;
+      }),
+      `
+        <button class="avatar-option avatar-option-custom ${customSelected ? "active" : ""}" type="button" data-avatar-custom>
+          ${
+            customSelected
+              ? `<img src="${escapeHtml(selectedAvatar)}" alt="Sua foto personalizada" />`
+              : '<span class="avatar-custom-mark">+</span>'
+          }
+          <strong>${customSelected ? "Sua foto" : "Foto propria"}</strong>
+        </button>
+      `
+    ].join("");
+
+    dom.avatarPicker.querySelectorAll("[data-avatar]").forEach((button) => {
+      button.addEventListener("click", () => {
+        selectedAvatar = button.dataset.avatar;
+        renderAvatarPicker();
+      });
+    });
+
+    dom.avatarPicker.querySelector("[data-avatar-custom]")?.addEventListener("click", () => {
+      dom.registerAvatarUpload.click();
+    });
+
+    renderAvatarUploadState();
+  }
+
+  function renderCharactersGallery() {
+    if (!state.characters.length) {
+      dom.charactersGallery.innerHTML = emptyState("Nenhum personagem foi encontrado no banco.");
+      return;
+    }
+
+    dom.charactersGallery.innerHTML = state.characters
+      .map(
+        (character) => `
+          <article class="character-card" style="--character-accent: ${escapeHtml(character.accent_color || "#8b5cf6")}">
+            <img src="${escapeHtml(character.image_url)}" alt="${escapeHtml(character.name)}" />
+            <div class="character-card-head">
+              <strong>${escapeHtml(character.name)}</strong>
+              <small>${escapeHtml(formatCharacterCodename(character.slug))}</small>
+            </div>
+            <p>${escapeHtml(character.description || "Sem descricao.")}</p>
+          </article>
+        `
+      )
+      .join("");
+  }
+
+  function renderBettingSessionCard() {
+    const currentUser = getCurrentUser();
+
+    if (!currentUser) {
+      dom.logoutButton.classList.add("hidden");
+      dom.bettingSessionCard.innerHTML = emptyState("Entre ou crie seu cadastro antes de registrar uma aposta.");
+      return;
+    }
+
+    dom.logoutButton.classList.remove("hidden");
+    const character = getCharacter(currentUser.character_id);
+    const stats = getUserStats(currentUser);
+
+    dom.bettingSessionCard.innerHTML = `
+      <div class="session-user">
+        <img class="session-avatar" src="${escapeHtml(currentUser.avatar_url || character?.image_url || avatarOptions[0])}" alt="${escapeHtml(currentUser.name)}" />
+        <div>
+          <strong>${escapeHtml(currentUser.name)}</strong>
+          <small>${escapeHtml(currentUser.email)}</small>
+          <p>${escapeHtml(character?.name || "Sem personagem selecionado")}</p>
+        </div>
+        <div class="session-balance">${formatPoints(stats.balance)} pts</div>
+      </div>
+    `;
+  }
+
+  function renderBetEntryList() {
+    const currentUser = getCurrentUser();
+    const openBets = getOpenBets();
+
+    if (!currentUser) {
+      dom.betEntryList.innerHTML = emptyState("Faca login na pagina Cadastro para apostar.");
+      return;
+    }
+
+    if (!openBets.length) {
+      dom.betEntryList.innerHTML = emptyState("Nao ha apostas abertas para registrar agora.");
+      return;
+    }
+
+    dom.betEntryList.innerHTML = openBets
+      .map((bet) => {
+        const userPrediction = getPredictionsForUser(currentUser.id).find((prediction) => prediction.bet_id === bet.id);
+        const hasPrediction = Boolean(userPrediction);
+        return `
+          <article class="bet-card">
+            <div class="bet-card-top">
+              <div>
+                <span class="chip chip-open">Aberta</span>
+                <h3>${escapeHtml(bet.title)}</h3>
+              </div>
+              <strong class="odds-badge">${Number(bet.base_multiplier).toFixed(2)}x</strong>
+            </div>
+            <p>${escapeHtml(bet.description || "Sem descricao cadastrada.")}</p>
+            <div class="bet-meta">
+              <span>Fecha em ${escapeHtml(formatDateTime(bet.closes_at))}</span>
+              <span>${hasPrediction ? "Sua aposta ja foi registrada" : "Voce ainda nao apostou"}</span>
+            </div>
+            ${
+              hasPrediction
+                ? `<div class="info-note">${escapeHtml(buildPredictionSummary(userPrediction))}</div>`
+                : `
+                  <form class="bet-form" data-bet-form data-bet-id="${escapeHtml(bet.id)}">
+                    <label>
+                      <span>Valor do palpite</span>
+                      <input name="predicted_value" type="text" placeholder="Ex: 3x1, 42, Time A" required />
+                    </label>
+                    <label>
+                      <span>CIC-points</span>
+                      <input name="amount" type="number" min="10" value="50" required />
+                    </label>
+                    <button class="primary-button" type="submit">Registrar aposta</button>
+                  </form>
+                `
+            }
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function renderAdminBetAccess() {
+    const currentUser = getCurrentUser();
+    const isAdminUser = currentUser ? isAdmin(currentUser) : false;
+
+    dom.adminBetsNav.classList.toggle("hidden", !isAdminUser);
+    dom.adminResolveNav.classList.toggle("hidden", !isAdminUser);
+    dom.adminBetForm.classList.toggle("hidden", !isAdminUser);
+
+    if (!currentUser) {
+      dom.adminBetsAccess.innerHTML = emptyState("Entre com um usuario administrador para cadastrar apostas.");
+      return;
+    }
+
+    if (!isAdminUser) {
+      dom.adminBetsAccess.innerHTML = emptyState("Esta pagina e exclusiva para administradores.");
+      if (state.currentView === "nova-aposta") {
+        setActiveView("home");
+      }
+      return;
+    }
+
+    dom.adminBetsAccess.innerHTML = `
+      <div class="session-user">
+        <div>
+          <strong>${escapeHtml(currentUser.name)}</strong>
+          <small>${escapeHtml(currentUser.email)}</small>
+          <p>Perfil com permissao para cadastrar novas apostas.</p>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAdminBetDeleteList() {
+    const currentUser = getCurrentUser();
+    const openBets = getOpenBets();
+
+    if (!currentUser || !isAdmin(currentUser)) {
+      dom.adminBetsDeleteList.innerHTML = emptyState("A lista de exclusao aparece apenas para administradores.");
+      return;
+    }
+
+    if (!openBets.length) {
+      dom.adminBetsDeleteList.innerHTML = emptyState("Nao ha apostas vigentes para excluir.");
+      return;
+    }
+
+    dom.adminBetsDeleteList.innerHTML = openBets
+      .map((bet) => {
+        const entryCount = getPredictionsForBet(bet.id).length;
+        const comboCount = state.comboLegs.filter((leg) => leg.bet_id === bet.id).map((leg) => leg.combo_id).filter(Boolean)
+          .filter((comboId, index, list) => list.indexOf(comboId) === index).length;
+
+        return `
+          <article class="bet-card compact">
+            <div class="bet-card-top">
+              <div>
+                <span class="chip chip-open">Vigente</span>
+                <h3>${escapeHtml(bet.title)}</h3>
+              </div>
+              <strong class="odds-badge">${Number(bet.base_multiplier).toFixed(2)}x</strong>
+            </div>
+            <p>${escapeHtml(bet.description || "Sem descricao cadastrada.")}</p>
+            <div class="bet-meta">
+              <span>${entryCount} aposta(s) vinculada(s)</span>
+              <span>${comboCount} combo(s) afetado(s)</span>
+            </div>
+            <form data-delete-bet-form data-bet-id="${escapeHtml(bet.id)}">
+              <button class="danger-button" type="submit">Excluir aposta</button>
+            </form>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  function renderAdminResolveList() {
+    const currentUser = getCurrentUser();
+    const activeBets = state.bets.filter((bet) => bet.status === "open");
+
+    if (!currentUser || !isAdmin(currentUser)) {
+      dom.adminResolveList.innerHTML = emptyState("A resolucao de apostas aparece apenas para administradores.");
+      return;
+    }
+
+    if (!activeBets.length) {
+      dom.adminResolveList.innerHTML = emptyState("Nao ha apostas ativas para resolver.");
+      return;
+    }
+
+    dom.adminResolveList.innerHTML = activeBets
+      .map((bet) => {
+        const predictions = getPredictionsForBet(bet.id);
+
+        return `
+          <article class="bet-card compact">
+            <div class="bet-card-top">
+              <div>
+                <span class="chip ${new Date(bet.closes_at) <= new Date() ? "chip-soon" : "chip-open"}">
+                  ${new Date(bet.closes_at) <= new Date() ? "Fechada para entrada" : "Ainda aberta"}
+                </span>
+                <h3>${escapeHtml(bet.title)}</h3>
+              </div>
+              <strong class="odds-badge">${Number(bet.base_multiplier).toFixed(2)}x</strong>
+            </div>
+            <p>${escapeHtml(bet.description || "Sem descricao cadastrada.")}</p>
+            <div class="bet-meta">
+              <span>${predictions.length} aposta(s) registrada(s)</span>
+              <span>Fecha em ${escapeHtml(formatDateTime(bet.closes_at))}</span>
+            </div>
+            <form class="form-stack" data-resolve-form data-bet-id="${escapeHtml(bet.id)}">
+              <div class="resolve-list">
+                ${
+                  predictions.length
+                    ? predictions
+                        .map((prediction) => {
+                          const user = state.users.find((item) => item.id === prediction.user_id);
+                          const payout = calculatePredictionPayout(prediction);
+                          return `
+                            <label class="resolve-item">
+                              <input type="checkbox" name="winner_prediction_ids" value="${escapeHtml(prediction.id)}" />
+                              <span>
+                                <strong>${escapeHtml(user?.name || "Usuario")}</strong>
+                                <small>Palpite: ${escapeHtml(prediction.predicted_value || "Sem palpite informado")}</small>
+                                <small>Apostou ${formatPoints(prediction.amount)} pts</small>
+                                <small>Recebe ${formatPoints(payout)} pts se vencer</small>
+                              </span>
+                            </label>
+                          `;
+                        })
+                        .join("")
+                    : '<div class="empty-state">Nao ha apostas registradas para esta aposta.</div>'
+                }
+              </div>
+              <button class="primary-button" type="submit" ${predictions.length ? "" : "disabled"}>Registrar resultado</button>
+            </form>
+          </article>
+        `;
+      })
+      .join("");
+  }
+
+  async function handleLoginSubmit(event) {
+    event.preventDefault();
+    const email = dom.loginEmail.value.trim().toLowerCase();
+    const password = dom.loginPassword.value;
+
+    if (!email) {
+      setFeedback("Informe um email valido.", "error");
+      return;
+    }
+
+    if (!password) {
+      setFeedback("Informe sua senha.", "error");
+      return;
+    }
+
+    try {
+      const result = await fetchJson("/api/auth-login", {
+        method: "POST",
+        body: JSON.stringify({ email, password })
+      });
+
+      state.session = {
+        userId: result.user.id,
+        email: result.user.email
+      };
+      persistSession(state.session);
+      dom.loginForm.reset();
+      await refreshData();
+      setFeedback(`Sessao iniciada para ${result.user.name}.`, "success", true);
+      setActiveView("apostas");
+    } catch (error) {
+      setFeedback(error.message, "error");
+    }
+  }
+
+  async function handleRegisterSubmit(event) {
+    event.preventDefault();
+
+    const name = dom.registerName.value.trim();
+    const email = dom.registerEmail.value.trim().toLowerCase();
+    const password = dom.registerPassword.value;
+    const passwordConfirm = dom.registerPasswordConfirm.value;
+    const characterId = dom.registerCharacter.value;
+    const startingBalance = 1000;
+
+    if (!name || !email || !characterId) {
+      setFeedback("Preencha nome, email e personagem.", "error");
+      return;
+    }
+
+    if (password.length < 4) {
+      setFeedback("A senha deve ter pelo menos 4 caracteres.", "error");
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      setFeedback("A confirmacao de senha nao confere.", "error");
+      return;
+    }
+
+    try {
+      const result = await fetchJson("/api/auth-register", {
+        method: "POST",
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          avatarUrl: selectedAvatar,
+          characterId,
+          startingBalance
+        })
+      });
+
+      state.session = {
+        userId: result.user.id,
+        email: result.user.email
+      };
+      persistSession(state.session);
+      dom.registerForm.reset();
+      dom.registerBalance.value = 1000;
+      resetAvatarSelection();
+      await refreshData();
+      setFeedback("Cadastro criado com sucesso.", "success", true);
+      setActiveView("apostas");
+    } catch (error) {
+      setFeedback(error.message, "error");
+    }
+  }
+
+  async function handleAvatarUploadChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    try {
+      validateAvatarFile(file);
+      setFeedback("Ajustando foto para usar como avatar...", "info");
+      selectedAvatar = await buildAvatarDataUrl(file);
+      renderAvatarPicker();
+      setFeedback("Foto personalizada pronta para o cadastro.", "success", true);
+    } catch (error) {
+      setFeedback(error.message || "Nao foi possivel carregar a foto escolhida.", "error");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function toggleTheme() {
+    applyTheme(state.theme === "dark" ? "light" : "dark", true);
+  }
+
+  async function handleBetEntrySubmit(event) {
+    const form = event.target.closest("[data-bet-form]");
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+    const currentUser = getCurrentUser();
+    if (!currentUser) {
+      setFeedback("Entre primeiro para registrar sua aposta.", "error");
+      return;
+    }
+
+    try {
+      await fetchJson("/api/predictions-create", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: currentUser.id,
+          betId: form.dataset.betId,
+          predictedValue: form.querySelector('[name="predicted_value"]').value.trim(),
+          amount: Number(form.querySelector('[name="amount"]').value || 0)
+        })
+      });
+
+      await refreshData();
+      setFeedback("Aposta registrada com sucesso.", "success", true);
+    } catch (error) {
+      setFeedback(error.message, "error");
+    }
+  }
+
+  async function handleAdminBetSubmit(event) {
+    event.preventDefault();
+    const currentUser = getCurrentUser();
+
+    if (!currentUser || !isAdmin(currentUser)) {
+      setFeedback("Apenas administradores podem cadastrar apostas.", "error");
+      return;
+    }
+
+    const title = dom.betTitle.value.trim();
+    const description = dom.betDescription.value.trim();
+    const closesAtInput = dom.betClosesAt.value;
+    const baseMultiplier = Number(dom.betMultiplier.value || 1.6);
+    const closesAt = closesAtInput ? new Date(closesAtInput) : null;
+
+    if (!title || !closesAt || Number.isNaN(closesAt.getTime())) {
+      setFeedback("Preencha titulo e encerramento validos.", "error");
+      return;
+    }
+
+    try {
+      await fetchJson("/api/bets-create", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: currentUser.id,
+          title,
+          description,
+          closesAt: closesAt.toISOString(),
+          baseMultiplier
+        })
+      });
+
+      dom.adminBetForm.reset();
+      dom.betMultiplier.value = 1.6;
+      await refreshData();
+      setFeedback("Aposta cadastrada com sucesso.", "success", true);
+      setActiveView("home");
+    } catch (error) {
+      setFeedback(error.message, "error");
+    }
+  }
+
+  async function handleAdminBetDelete(event) {
+    const form = event.target.closest("[data-delete-bet-form]");
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+    const currentUser = getCurrentUser();
+
+    if (!currentUser || !isAdmin(currentUser)) {
+      setFeedback("Apenas administradores podem excluir apostas.", "error");
+      return;
+    }
+
+    try {
+      const result = await fetchJson("/api/bets-delete", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: currentUser.id,
+          betId: form.dataset.betId
+        })
+      });
+
+      await refreshData();
+      setFeedback(
+        `Aposta excluida. ${result.deleted.affectedPredictions} entrada(s) e ${result.deleted.affectedCombos} combo(s) foram estornados.`,
+        "success",
+        true
+      );
+    } catch (error) {
+      setFeedback(error.message, "error");
+    }
+  }
+
+  async function handleAdminResolveSubmit(event) {
+    const form = event.target.closest("[data-resolve-form]");
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+    const currentUser = getCurrentUser();
+
+    if (!currentUser || !isAdmin(currentUser)) {
+      setFeedback("Apenas administradores podem registrar resultados.", "error");
+      return;
+    }
+
+    try {
+      await fetchJson("/api/bets-resolve", {
+        method: "POST",
+        body: JSON.stringify({
+          userId: currentUser.id,
+          betId: form.dataset.betId,
+          winnerPredictionIds: Array.from(form.querySelectorAll('[name="winner_prediction_ids"]:checked')).map(
+            (input) => input.value
+          )
+        })
+      });
+
+      await refreshData();
+      setFeedback("Vencedores registrados com sucesso.", "success", true);
+    } catch (error) {
+      setFeedback(error.message, "error");
+    }
+  }
+
+  function setActiveView(view) {
+    const allowedViews = new Set(["home", "entrar", "cadastro", "apostas", "nova-aposta", "resolver-apostas"]);
+    state.currentView = allowedViews.has(view) ? view : "home";
+
+    if (state.currentView === "entrar" && getCurrentUser()) {
+      state.currentView = "home";
+    }
+
+    if (state.currentView === "apostas" && !getCurrentUser()) {
+      state.currentView = "home";
+    }
+
+    if (state.currentView === "nova-aposta" || state.currentView === "resolver-apostas") {
+      const currentUser = getCurrentUser();
+      if (!currentUser || !isAdmin(currentUser)) {
+        state.currentView = "home";
+      }
+    }
+
+    dom.navLinks.forEach((button) => {
+      button.classList.toggle("active", button.dataset.viewTarget === state.currentView);
+    });
+
+    dom.viewPanels.forEach((panel) => {
+      panel.classList.toggle("active", panel.dataset.view === state.currentView);
+    });
+
+    const hash = `#${state.currentView}`;
+    if (window.location.hash !== hash) {
+      history.replaceState(null, "", hash);
+    }
+  }
+
+  function resolveInitialView() {
+    const view = String(window.location.hash || "").replace("#", "");
+    return view || "home";
   }
 
   function syncSessionUser() {
@@ -203,842 +950,16 @@
     persistSession(state.session);
   }
 
-  function renderAll() {
-    renderAuthMode();
-    renderAvatarPicker();
-    renderCharacters();
-    renderSessionCard();
-    renderSummary();
-    renderFeed();
-    renderBets();
-    renderComboBuilder();
-    renderComboHistory();
-    renderRanking();
-    renderAdmin();
-    renderComboPreview();
-  }
-
-  function renderAuthMode() {
-    const isRegister = state.authMode === "register";
-    dom.characterField.classList.toggle("hidden", !isRegister);
-    dom.balanceField.classList.toggle("hidden", !isRegister);
-    dom.avatarField.classList.toggle("hidden", !isRegister);
-    dom.authSubmit.textContent = isRegister ? "Criar perfil" : "Entrar na arena";
-
-    dom.authCharacter.innerHTML = state.characters
-      .map((character) => `<option value="${escapeHtml(character.id)}">${escapeHtml(character.name)}</option>`)
-      .join("");
-  }
-
-  function renderAvatarPicker() {
-    dom.avatarField.innerHTML = avatarOptions
-      .map((avatar) => {
-        const active = avatar === selectedAvatar ? "active" : "";
-        return `
-          <button class="pick-avatar ${active}" type="button" data-avatar="${escapeHtml(avatar)}">
-            <img src="${escapeHtml(avatar)}" alt="Avatar" />
-          </button>
-        `;
-      })
-      .join("");
-
-    dom.avatarField.querySelectorAll("[data-avatar]").forEach((button) => {
-      button.addEventListener("click", () => {
-        selectedAvatar = button.dataset.avatar;
-        renderAvatarPicker();
-      });
-    });
-  }
-
-  function renderCharacters() {
-    if (!state.characters.length) {
-      dom.charactersGallery.innerHTML = emptyCard("Rode o SQL do Supabase para carregar os personagens iniciais.");
-      return;
-    }
-
-    dom.charactersGallery.innerHTML = state.characters
-      .map(
-        (character) => `
-          <article class="character-card">
-            <img src="${escapeHtml(character.image_url)}" alt="${escapeHtml(character.name)}" />
-            <span class="tag">${escapeHtml(character.slug)}</span>
-            <h3>${escapeHtml(character.name)}</h3>
-            <p>${escapeHtml(character.description || "Sem descricao.")}</p>
-          </article>
-        `
-      )
-      .join("");
-  }
-
-  function renderSessionCard() {
-    const currentUser = getCurrentUser();
-
-    if (!currentUser) {
-      dom.logoutButton.classList.add("hidden");
-      dom.sessionCard.innerHTML = emptyCard("Nenhum usuario logado. Entre ou crie um perfil para participar.");
-      return;
-    }
-
-    dom.logoutButton.classList.remove("hidden");
-    const character = getCharacter(currentUser.character_id);
-    const stats = getUserStats(currentUser);
-
-    dom.sessionCard.innerHTML = `
-      <div class="session-user">
-        <img class="avatar" src="${escapeHtml(currentUser.avatar_url || character?.image_url || avatarOptions[0])}" alt="${escapeHtml(currentUser.name)}" />
-        <div>
-          <strong>${escapeHtml(currentUser.name)}</strong>
-          <div>${escapeHtml(currentUser.email)}</div>
-          <small>${escapeHtml(character?.name || "Sem personagem")}</small>
-        </div>
-        <span class="balance-pill">${formatPoints(stats.balance)} CICPoints</span>
-      </div>
-    `;
-  }
-
-  function renderSummary() {
-    const currentUser = getCurrentUser();
-    const openBets = state.bets.filter((bet) => isBetOpen(bet));
-    const totalVolume = state.predictions.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-    const totalCombos = state.combos.length;
-
-    const summaryItems = currentUser
-      ? (() => {
-          const stats = getUserStats(currentUser);
-          return [
-            {
-              label: "Saldo atual",
-              value: `${formatPoints(stats.balance)} pts`,
-              hint: "Calculado a partir das entradas e dos resultados."
-            },
-            {
-              label: "Taxa de acerto",
-              value: `${formatPercent(stats.accuracy)}%`,
-              hint: `${stats.wins} acertos em ${stats.settledPredictions} apostas resolvidas`
-            },
-            {
-              label: "Apostas abertas",
-              value: String(openBets.length),
-              hint: "Mercados ainda aceitando participacao"
-            },
-            {
-              label: "Combos no sistema",
-              value: String(totalCombos),
-              hint: "Historico consolidado de combinadas"
-            }
-          ];
-        })()
-      : [
-          {
-            label: "Jogadores cadastrados",
-            value: String(state.users.length),
-            hint: "Total de apostadores ativos no banco"
-          },
-          {
-            label: "Apostas abertas",
-            value: String(openBets.length),
-            hint: "Mercados ainda aceitando participacao"
-          },
-          {
-            label: "Volume apostado",
-            value: `${formatPoints(totalVolume)} pts`,
-            hint: "Soma das entradas registradas"
-          },
-          {
-            label: "Combos criados",
-            value: String(totalCombos),
-            hint: "Historico de combinadas"
-          }
-        ];
-
-    dom.summaryGrid.innerHTML = summaryItems
-      .map(
-        (item) => `
-          <article class="summary-card">
-            <span>${escapeHtml(item.label)}</span>
-            <strong>${escapeHtml(item.value)}</strong>
-            <small>${escapeHtml(item.hint)}</small>
-          </article>
-        `
-      )
-      .join("");
-  }
-
-  function renderFeed() {
-    const currentUser = getCurrentUser();
-    const feed = [];
-
-    if (currentUser) {
-      getPredictionsForUser(currentUser.id)
-        .slice(0, 4)
-        .forEach((prediction) => {
-          const bet = getBet(prediction.bet_id);
-          const option = getOption(prediction.bet_option_id);
-          const payout = calculatePredictionPayout(prediction);
-          feed.push({
-            title: bet?.title || "Aposta",
-            description: `${option?.label || "Opcao"} • ${formatPoints(prediction.amount)} pts`,
-            meta: predictionStatusLabel(prediction),
-            extra: payout > 0 ? `Retorno potencial: ${formatPoints(payout)} pts` : "Aguardando resultado"
-          });
-        });
-
-      getCombosForUser(currentUser.id)
-        .slice(0, 3)
-        .forEach((combo) => {
-          const comboStatus = getComboStatus(combo);
-          feed.push({
-            title: `Combo com ${getComboLegs(combo.id).length} selecoes`,
-            description: `${formatPoints(combo.stake)} pts • ${comboStatus.label}`,
-            meta: `Odds ${combo.final_odds.toFixed(2)}x`,
-            extra: `Potencial ${formatPoints(combo.potential_payout)} pts`
-          });
-        });
-    }
-
-    if (!feed.length) {
-      dom.activityFeed.innerHTML = emptyCard("As ultimas entradas e combinadas vao aparecer aqui.");
-      return;
-    }
-
-    dom.activityFeed.innerHTML = feed
-      .slice(0, 6)
-      .map(
-        (item) => `
-          <article class="feed-item">
-            <strong>${escapeHtml(item.title)}</strong>
-            <div>${escapeHtml(item.description)}</div>
-            <small>${escapeHtml(item.meta)}</small>
-            <p>${escapeHtml(item.extra)}</p>
-          </article>
-        `
-      )
-      .join("");
-  }
-
-  function renderBets() {
-    if (!state.bets.length) {
-      dom.betsList.innerHTML = emptyCard("Nenhuma aposta cadastrada ainda.");
-      return;
-    }
-
-    const currentUser = getCurrentUser();
-
-    dom.betsList.innerHTML = state.bets
-      .map((bet) => {
-        const options = getOptionsForBet(bet.id);
-        const volume = getPredictionsForBet(bet.id).reduce((sum, item) => sum + Number(item.amount || 0), 0);
-        const status = getBetStatusLabel(bet);
-        const disabledReason = !currentUser
-          ? "Entre para participar."
-          : !isBetOpen(bet)
-            ? "Mercado encerrado."
-            : "";
-
-        return `
-          <article class="bet-card">
-            <div class="bet-card-header">
-              <div>
-                <span class="tag ${status.tone}">${escapeHtml(status.label)}</span>
-                <h3>${escapeHtml(bet.title)}</h3>
-                <p>${escapeHtml(bet.description || "Sem descricao.")}</p>
-              </div>
-              <div class="balance-pill">${Number(bet.base_multiplier).toFixed(2)}x</div>
-            </div>
-            <div class="bet-meta">
-              <span class="tag">Fecha em ${escapeHtml(formatDateTime(bet.closes_at))}</span>
-              <span class="tag">${escapeHtml(capitalize(bet.risk_level))}</span>
-              <span class="tag">${formatPoints(volume)} pts no mercado</span>
-            </div>
-            <div class="bet-options">
-              ${options
-                .map(
-                  (option) => `
-                    <div class="bet-option">
-                      <strong>${escapeHtml(option.label)}</strong>
-                      <div>Odd ${Number(option.odds_multiplier).toFixed(2)}x</div>
-                    </div>
-                  `
-                )
-                .join("")}
-            </div>
-            <form class="bet-inline-form" data-bet-form data-bet-id="${escapeHtml(bet.id)}">
-              <select name="bet_option_id" ${disabledReason ? "disabled" : ""}>
-                ${options
-                  .map(
-                    (option) => `
-                      <option value="${escapeHtml(option.id)}">
-                        ${escapeHtml(option.label)} • ${Number(option.odds_multiplier).toFixed(2)}x
-                      </option>
-                    `
-                  )
-                  .join("")}
-              </select>
-              <input name="amount" type="number" min="10" value="50" ${disabledReason ? "disabled" : ""} />
-              <button class="inline-button" type="submit" ${disabledReason ? "disabled" : ""}>Apostar</button>
-            </form>
-            ${disabledReason ? `<small>${escapeHtml(disabledReason)}</small>` : ""}
-          </article>
-        `;
-      })
-      .join("");
-  }
-
-  function renderComboBuilder() {
-    const openBets = state.bets.filter((bet) => isBetOpen(bet));
-
-    if (!openBets.length) {
-      dom.comboBuilder.innerHTML = emptyCard("Sem apostas abertas para montar combo.");
-      return;
-    }
-
-    dom.comboBuilder.innerHTML = openBets
-      .map((bet) => {
-        const options = getOptionsForBet(bet.id);
-        return `
-          <article class="combo-option" data-combo-bet="${escapeHtml(bet.id)}">
-            <label>
-              <input type="checkbox" data-combo-check="${escapeHtml(bet.id)}" />
-              <span>
-                <strong>${escapeHtml(bet.title)}</strong><br />
-                <small>Fecha em ${escapeHtml(formatDateTime(bet.closes_at))}</small>
-              </span>
-            </label>
-            <select data-combo-option="${escapeHtml(bet.id)}">
-              ${options
-                .map(
-                  (option) => `
-                    <option value="${escapeHtml(option.id)}">
-                      ${escapeHtml(option.label)} • ${Number(option.odds_multiplier).toFixed(2)}x
-                    </option>
-                  `
-                )
-                .join("")}
-            </select>
-          </article>
-        `;
-      })
-      .join("");
-  }
-
-  function renderComboPreview() {
-    const payload = readComboSelection();
-    if (!payload.legs.length) {
-      dom.comboPreview.innerHTML = "Escolha pelo menos duas apostas para visualizar as odds combinadas.";
-      return;
-    }
-
-    const bonus = comboBonusMultiplier(payload.legs.length);
-    const combinedOdds = calculateComboFinalOdds(payload.legs);
-    const payout = Math.round(payload.stake * combinedOdds);
-
-    dom.comboPreview.innerHTML = `
-      <strong>${payload.legs.length} selecoes escolhidas</strong><br />
-      Bonus progressivo: ${bonus.toFixed(2)}x<br />
-      Odds simuladas: ${combinedOdds.toFixed(2)}x<br />
-      Ganho potencial: ${formatPoints(payout)} CICPoints
-    `;
-  }
-
-  function renderComboHistory() {
-    const currentUser = getCurrentUser();
-    const combos = currentUser ? getCombosForUser(currentUser.id) : state.combos;
-
-    if (!combos.length) {
-      dom.comboHistory.innerHTML = emptyCard("Nenhum combo registrado ainda.");
-      return;
-    }
-
-    dom.comboHistory.innerHTML = combos
-      .slice(0, 8)
-      .map((combo) => {
-        const comboStatus = getComboStatus(combo);
-        const legs = getComboLegs(combo.id);
-        return `
-          <article class="combo-item">
-            <div class="panel-head">
-              <strong>Combo com ${legs.length} selecoes</strong>
-              <span class="tag ${comboStatus.tone}">${escapeHtml(comboStatus.label)}</span>
-            </div>
-            <div>Stake: ${formatPoints(combo.stake)} pts</div>
-            <div>Odds finais: ${Number(combo.final_odds).toFixed(2)}x</div>
-            <div>Retorno potencial: ${formatPoints(combo.potential_payout)} pts</div>
-          </article>
-        `;
-      })
-      .join("");
-  }
-
-  function renderRanking() {
-    renderPlayersRanking();
-    renderBetsRanking();
-  }
-
-  function renderPlayersRanking() {
-    const rows = state.users
-      .map((user) => {
-        const stats = getUserStats(user);
-        const character = getCharacter(user.character_id);
-        return {
-          user,
-          stats,
-          character
-        };
-      })
-      .sort((a, b) => b.stats.balance - a.stats.balance);
-
-    if (!rows.length) {
-      dom.playersRanking.innerHTML = emptyCard("Sem jogadores cadastrados.");
-      return;
-    }
-
-    dom.playersRanking.innerHTML = `
-      <div class="table-head">
-        <span>#</span>
-        <span>Apostador</span>
-        <span>Personagem</span>
-        <span>Saldo</span>
-        <span>Acerto</span>
-      </div>
-      ${rows
-        .map(
-          (row, index) => `
-            <div class="table-row">
-              <span>${index + 1}</span>
-              <div>
-                <strong>${escapeHtml(row.user.name)}</strong>
-                <small>${escapeHtml(row.user.email)}</small>
-              </div>
-              <span>${escapeHtml(row.character?.name || "-")}</span>
-              <span>${formatPoints(row.stats.balance)}</span>
-              <span>${formatPercent(row.stats.accuracy)}%</span>
-            </div>
-          `
-        )
-        .join("")}
-    `;
-  }
-
-  function renderBetsRanking() {
-    if (!state.bets.length) {
-      dom.betsRanking.innerHTML = emptyCard("Sem apostas para rankear.");
-      return;
-    }
-
-    const rows = state.bets
-      .map((bet) => {
-        const entries = getPredictionsForBet(bet.id);
-        const volume = entries.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-        const winners = entries.filter((item) => didPredictionWin(item)).length;
-        const settled = entries.filter((item) => isPredictionSettled(item)).length;
-        return {
-          bet,
-          entries,
-          volume,
-          accuracy: settled ? (winners / settled) * 100 : 0
-        };
-      })
-      .sort((a, b) => b.volume - a.volume);
-
-    dom.betsRanking.innerHTML = `
-      <div class="table-head">
-        <span>#</span>
-        <span>Aposta</span>
-        <span>Status</span>
-        <span>Volume</span>
-        <span>Acerto</span>
-      </div>
-      ${rows
-        .map((row, index) => {
-          const status = getBetStatusLabel(row.bet);
-          return `
-            <div class="table-row">
-              <span>${index + 1}</span>
-              <div>
-                <strong>${escapeHtml(row.bet.title)}</strong>
-                <small>${row.entries.length} entradas</small>
-              </div>
-              <span class="tag ${status.tone}">${escapeHtml(status.label)}</span>
-              <span>${formatPoints(row.volume)}</span>
-              <span>${formatPercent(row.accuracy)}%</span>
-            </div>
-          `;
-        })
-        .join("")}
-    `;
-  }
-
-  function renderAdmin() {
-    const currentUser = getCurrentUser();
-    if (!currentUser || !isAdmin(currentUser)) {
-      dom.adminPanel.innerHTML = emptyCard("Esta area aparece apenas para administradores configurados.");
-      return;
-    }
-
-    const openBets = state.bets.filter((bet) => bet.status === "open");
-    if (!openBets.length) {
-      dom.adminPanel.innerHTML = emptyCard("Nao ha apostas abertas aguardando definicao.");
-      return;
-    }
-
-    dom.adminPanel.innerHTML = openBets
-      .map((bet) => {
-        const options = getOptionsForBet(bet.id);
-        return `
-          <article class="admin-card">
-            <div class="admin-card-header">
-              <div>
-                <span class="tag warning">Aguardando resultado</span>
-                <h3>${escapeHtml(bet.title)}</h3>
-                <p>${escapeHtml(bet.description || "Sem descricao.")}</p>
-              </div>
-              <span class="balance-pill">${formatDateTime(bet.closes_at)}</span>
-            </div>
-            <form data-resolve-form data-bet-id="${escapeHtml(bet.id)}">
-              <select name="winning_option_id">
-                ${options
-                  .map(
-                    (option) => `
-                      <option value="${escapeHtml(option.id)}">${escapeHtml(option.label)}</option>
-                    `
-                  )
-                  .join("")}
-              </select>
-              <button class="primary-button" type="submit">Definir vencedor</button>
-            </form>
-          </article>
-        `;
-      })
-      .join("");
-  }
-
-  async function handleAuthSubmit(event) {
-    event.preventDefault();
-
-    if (!state.supabase) {
-      return;
-    }
-
-    const email = dom.authEmail.value.trim().toLowerCase();
-    const name = dom.authName.value.trim();
-
-    if (!email) {
-      setFeedback("Informe um email valido.", "error");
-      return;
-    }
-
-    if (state.authMode === "login") {
-      const existingUser = state.users.find((user) => user.email.toLowerCase() === email);
-      if (!existingUser) {
-        setFeedback("Usuario nao encontrado. Troque para cadastro e crie o perfil.", "error");
-        return;
-      }
-
-      state.session = {
-        userId: existingUser.id,
-        email: existingUser.email
-      };
-      persistSession(state.session);
-      renderAll();
-      setFeedback(`Sessao iniciada para ${existingUser.name}.`, "success", true);
-      return;
-    }
-
-    if (!name) {
-      setFeedback("Informe o nome para criar o perfil.", "error");
-      return;
-    }
-
-    const characterId = dom.authCharacter.value;
-    const startingBalance = Number(dom.authBalance.value || 1000);
-
-    if (state.users.some((user) => user.email.toLowerCase() === email)) {
-      setFeedback("Ja existe um perfil com este email.", "error");
-      return;
-    }
-
-    const { data, error } = await state.supabase
-      .from("users")
-      .insert({
-        name,
-        email,
-        avatar_url: selectedAvatar,
-        character_id: characterId,
-        starting_balance: startingBalance,
-        is_admin: isEmailAdmin(email)
-      })
-      .select("*")
-      .single();
-
-    if (error) {
-      setFeedback(error.message, "error");
-      return;
-    }
-
-    state.session = { userId: data.id, email: data.email };
-    persistSession(state.session);
-    dom.authForm.reset();
-    dom.authBalance.value = 1000;
-    await refreshData();
-    setFeedback("Perfil criado com sucesso.", "success", true);
-  }
-
-  async function handleBetSubmit(event) {
-    event.preventDefault();
-    const currentUser = getCurrentUser();
-
-    if (!currentUser) {
-      setFeedback("Entre para criar uma aposta.", "error");
-      return;
-    }
-
-    const title = document.getElementById("bet-title").value.trim();
-    const description = document.getElementById("bet-description").value.trim();
-    const closesAtInput = document.getElementById("bet-closes-at").value;
-    const baseMultiplier = Number(document.getElementById("bet-multiplier").value || 1.6);
-    const riskLevel = document.getElementById("bet-risk-level").value;
-    const optionsText = document.getElementById("bet-options").value.trim();
-
-    const closesAt = closesAtInput ? new Date(closesAtInput) : null;
-    const parsedOptions = optionsText
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean)
-      .map((line, index) => {
-        const [label, odds] = line.split("|");
-        return {
-          label: label?.trim(),
-          odds_multiplier: Number(odds || 1.5),
-          sort_order: index + 1
-        };
-      })
-      .filter((option) => option.label);
-
-    if (!title || !closesAt || Number.isNaN(closesAt.getTime())) {
-      setFeedback("Preencha titulo e encerramento validos.", "error");
-      return;
-    }
-
-    if (closesAt <= new Date()) {
-      setFeedback("A data de encerramento precisa ser futura.", "error");
-      return;
-    }
-
-    if (parsedOptions.length < 2) {
-      setFeedback("Informe pelo menos duas opcoes para a aposta.", "error");
-      return;
-    }
-
-    const { data: bet, error: betError } = await state.supabase
-      .from("bets")
-      .insert({
-        title,
-        description,
-        closes_at: closesAt.toISOString(),
-        created_by: currentUser.id,
-        base_multiplier: baseMultiplier,
-        risk_level: riskLevel,
-        status: "open"
-      })
-      .select("*")
-      .single();
-
-    if (betError) {
-      setFeedback(betError.message, "error");
-      return;
-    }
-
-    const { error: optionsError } = await state.supabase.from("bet_options").insert(
-      parsedOptions.map((option) => ({
-        ...option,
-        bet_id: bet.id
-      }))
-    );
-
-    if (optionsError) {
-      setFeedback(optionsError.message, "error");
-      return;
-    }
-
-    dom.betForm.reset();
-    document.getElementById("bet-multiplier").value = 1.6;
-    document.getElementById("bet-risk-level").value = "medium";
-    document.getElementById("bet-options").value = "Time Orion|1.55\nTime Vega|1.75\nEmpate tecnico|2.20";
-    await refreshData();
-    setFeedback("Aposta criada com sucesso.", "success", true);
-  }
-
-  async function handleBetEntrySubmit(event) {
-    const form = event.target.closest("[data-bet-form]");
-    if (!form) {
-      return;
-    }
-
-    event.preventDefault();
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      setFeedback("Entre para participar das apostas.", "error");
-      return;
-    }
-
-    const betId = form.dataset.betId;
-    const bet = getBet(betId);
-    const optionId = form.querySelector('[name="bet_option_id"]').value;
-    const amount = Number(form.querySelector('[name="amount"]').value || 0);
-
-    if (!bet || !isBetOpen(bet)) {
-      setFeedback("Esta aposta ja esta encerrada.", "error");
-      return;
-    }
-
-    if (amount < 10) {
-      setFeedback("A entrada minima e de 10 CICPoints.", "error");
-      return;
-    }
-
-    const stats = getUserStats(currentUser);
-    if (stats.balance < amount) {
-      setFeedback("Saldo insuficiente para concluir a aposta.", "error");
-      return;
-    }
-
-    const { error } = await state.supabase.from("predictions").insert({
-      user_id: currentUser.id,
-      bet_id: betId,
-      bet_option_id: optionId,
-      amount
-    });
-
-    if (error) {
-      setFeedback(error.message, "error");
-      return;
-    }
-
-    await refreshData();
-    setFeedback("Aposta registrada com sucesso.", "success", true);
-  }
-
-  async function handleComboSubmit(event) {
-    event.preventDefault();
-    const currentUser = getCurrentUser();
-    if (!currentUser) {
-      setFeedback("Entre para montar um combo.", "error");
-      return;
-    }
-
-    const payload = readComboSelection();
-    if (payload.legs.length < 2) {
-      setFeedback("Escolha pelo menos duas apostas diferentes para criar o combo.", "error");
-      return;
-    }
-
-    const stats = getUserStats(currentUser);
-    if (stats.balance < payload.stake) {
-      setFeedback("Saldo insuficiente para registrar o combo.", "error");
-      return;
-    }
-
-    const comboInsert = {
-      user_id: currentUser.id,
-      stake: payload.stake,
-      bonus_multiplier: comboBonusMultiplier(payload.legs.length),
-      final_odds: calculateComboFinalOdds(payload.legs),
-      potential_payout: Math.round(payload.stake * calculateComboFinalOdds(payload.legs))
-    };
-
-    const { data: combo, error: comboError } = await state.supabase
-      .from("combos")
-      .insert(comboInsert)
-      .select("*")
-      .single();
-
-    if (comboError) {
-      setFeedback(comboError.message, "error");
-      return;
-    }
-
-    const { error: legsError } = await state.supabase.from("combo_legs").insert(
-      payload.legs.map((leg) => ({
-        combo_id: combo.id,
-        bet_id: leg.bet.id,
-        bet_option_id: leg.option.id,
-        created_at: new Date().toISOString()
-      }))
-    );
-
-    if (legsError) {
-      setFeedback(legsError.message, "error");
-      return;
-    }
-
-    event.target.reset();
-    document.getElementById("combo-stake").value = 80;
-    renderComboPreview();
-    await refreshData();
-    setFeedback("Combo registrado com sucesso.", "success", true);
-  }
-
-  async function handleResolveSubmit(event) {
-    const form = event.target.closest("[data-resolve-form]");
-    if (!form) {
-      return;
-    }
-
-    event.preventDefault();
-    const currentUser = getCurrentUser();
-    if (!currentUser || !isAdmin(currentUser)) {
-      setFeedback("Apenas admins podem definir resultados.", "error");
-      return;
-    }
-
-    const betId = form.dataset.betId;
-    const winningOptionId = form.querySelector('[name="winning_option_id"]').value;
-
-    const { error } = await state.supabase
-      .from("bets")
-      .update({
-        winning_option_id: winningOptionId,
-        status: "settled"
-      })
-      .eq("id", betId);
-
-    if (error) {
-      setFeedback(error.message, "error");
-      return;
-    }
-
-    await refreshData();
-    setFeedback("Resultado definido com sucesso.", "success", true);
-  }
-
-  function readComboSelection() {
-    const stake = Number(document.getElementById("combo-stake").value || 0);
-    const checks = dom.comboBuilder.querySelectorAll("[data-combo-check]");
-    const legs = [];
-
-    checks.forEach((checkbox) => {
-      if (!checkbox.checked) {
-        return;
-      }
-
-      const betId = checkbox.dataset.comboCheck;
-      const bet = getBet(betId);
-      const optionId = dom.comboBuilder.querySelector(`[data-combo-option="${CSS.escape(betId)}"]`).value;
-      const option = getOption(optionId);
-      if (bet && option) {
-        legs.push({ bet, option });
-      }
-    });
-
-    return { stake, legs };
-  }
-
   function getCurrentUser() {
     if (!state.session?.userId) {
       return null;
     }
 
     return state.users.find((user) => user.id === state.session.userId) || null;
+  }
+
+  function getOpenBets() {
+    return state.bets.filter((bet) => isBetOpen(bet));
   }
 
   function getCharacter(characterId) {
@@ -1049,20 +970,27 @@
     return state.bets.find((bet) => bet.id === betId) || null;
   }
 
-  function getOption(optionId) {
-    return state.betOptions.find((option) => option.id === optionId) || null;
-  }
-
-  function getOptionsForBet(betId) {
-    return state.betOptions.filter((option) => option.bet_id === betId);
-  }
-
   function getPredictionsForBet(betId) {
     return state.predictions.filter((prediction) => prediction.bet_id === betId);
   }
 
   function getPredictionsForUser(userId) {
     return state.predictions.filter((prediction) => prediction.user_id === userId);
+  }
+
+  function getWinningUserNamesForBet(betId) {
+    return getPredictionsForBet(betId)
+      .filter((prediction) => prediction.is_correct === true)
+      .map((prediction) => state.users.find((user) => user.id === prediction.user_id)?.name)
+      .filter(Boolean);
+  }
+
+  function buildPredictionSummary(prediction) {
+    if (!prediction) {
+      return "Cada apostador pode registrar apenas uma aposta neste evento.";
+    }
+
+    return `Palpite registrado: ${prediction.predicted_value || "Sem palpite informado"} com ${formatPoints(prediction.amount)} CIC-points.`;
   }
 
   function getCombosForUser(userId) {
@@ -1073,12 +1001,18 @@
     return state.comboLegs.filter((leg) => leg.combo_id === comboId);
   }
 
-  function isEmailAdmin(email) {
-    return (state.config.adminEmails || []).includes(email.toLowerCase());
+  function isAdmin(user) {
+    return Boolean(user?.is_admin) || (state.config?.adminEmails || []).includes(String(user?.email || "").toLowerCase());
   }
 
-  function isAdmin(user) {
-    return Boolean(user.is_admin) || isEmailAdmin(user.email);
+  function getLeaderboardRows() {
+    return state.users
+      .map((user) => ({
+        user,
+        stats: getUserStats(user),
+        character: getCharacter(user.character_id)
+      }))
+      .sort((a, b) => b.stats.balance - a.stats.balance);
   }
 
   function isBetOpen(bet) {
@@ -1087,14 +1021,14 @@
 
   function getBetStatusLabel(bet) {
     if (bet.status === "settled") {
-      return { label: "Encerrada", tone: "success" };
+      return { label: "Encerrada", className: "chip-closed" };
     }
 
     if (new Date(bet.closes_at) <= new Date()) {
-      return { label: "Fechada", tone: "warning" };
+      return { label: "Fechada", className: "chip-soon" };
     }
 
-    return { label: "Aberta", tone: "success" };
+    return { label: "Aberta", className: "chip-open" };
   }
 
   function getUserStats(user) {
@@ -1104,46 +1038,25 @@
     const comboStake = combos.reduce((sum, item) => sum + Number(item.stake || 0), 0);
     const winnings = predictions.reduce((sum, item) => sum + calculatePredictionSettledPayout(item), 0);
     const comboWinnings = combos.reduce((sum, item) => sum + calculateComboSettledPayout(item), 0);
-    const settledPredictions = predictions.filter((item) => isPredictionSettled(item)).length;
-    const wins = predictions.filter((item) => didPredictionWin(item)).length;
-    const balance = Number(user.starting_balance || 0) - predictionsStake - comboStake + winnings + comboWinnings;
 
     return {
-      balance,
-      wins,
-      settledPredictions,
-      accuracy: settledPredictions ? (wins / settledPredictions) * 100 : 0,
-      winnings,
-      comboWinnings
+      balance: Number(user.starting_balance || 0) - predictionsStake - comboStake + winnings + comboWinnings
     };
-  }
-
-  function predictionStatusLabel(prediction) {
-    if (!isPredictionSettled(prediction)) {
-      return "Aguardando resultado";
-    }
-    return didPredictionWin(prediction) ? "Aposta vencedora" : "Aposta perdida";
-  }
-
-  function isPredictionSettled(prediction) {
-    const bet = getBet(prediction.bet_id);
-    return Boolean(bet && bet.status === "settled" && bet.winning_option_id);
   }
 
   function didPredictionWin(prediction) {
     const bet = getBet(prediction.bet_id);
-    return Boolean(bet && bet.status === "settled" && bet.winning_option_id === prediction.bet_option_id);
+    return Boolean(bet && bet.status === "settled" && prediction.is_correct === true);
   }
 
   function calculatePredictionPayout(prediction) {
     const bet = getBet(prediction.bet_id);
-    const option = getOption(prediction.bet_option_id);
-    if (!bet || !option) {
+
+    if (!bet) {
       return 0;
     }
 
-    const riskMultiplier = riskMultipliers[bet.risk_level] || 1.35;
-    return Math.round(Number(prediction.amount) * Number(bet.base_multiplier) * riskMultiplier * Number(option.odds_multiplier));
+    return Math.round(Number(prediction.amount || 0) * Number(bet.base_multiplier || 0));
   }
 
   function calculatePredictionSettledPayout(prediction) {
@@ -1158,49 +1071,42 @@
     });
 
     if (hasLostLeg) {
-      return { label: "Perdido", tone: "danger" };
+      return "Perdido";
     }
 
-    const allSettled = legs.every((leg) => {
-      const bet = getBet(leg.bet_id);
-      return bet && bet.status === "settled" && bet.winning_option_id === leg.bet_option_id;
-    });
+    const allWon =
+      legs.length > 0 &&
+      legs.every((leg) => {
+        const bet = getBet(leg.bet_id);
+        return bet && bet.status === "settled" && bet.winning_option_id === leg.bet_option_id;
+      });
 
-    if (allSettled && legs.length) {
-      return { label: "Vencedor", tone: "success" };
-    }
-
-    return { label: "Pendente", tone: "warning" };
+    return allWon ? "Vencedor" : "Pendente";
   }
 
   function calculateComboSettledPayout(combo) {
-    return getComboStatus(combo).label === "Vencedor" ? Number(combo.potential_payout || 0) : 0;
-  }
-
-  function comboBonusMultiplier(legsCount) {
-    if (legsCount <= 1) {
-      return 1;
-    }
-    return Number((1 + (legsCount - 1) * 0.12).toFixed(2));
-  }
-
-  function calculateComboFinalOdds(legs) {
-    const base = legs.reduce((product, leg) => {
-      return product * Number(leg.option.odds_multiplier) * Number(leg.bet.base_multiplier) * 0.45;
-    }, 1);
-
-    return Number((base * comboBonusMultiplier(legs.length)).toFixed(2));
+    return getComboStatus(combo) === "Vencedor" ? Number(combo.potential_payout || 0) : 0;
   }
 
   function logout() {
     clearSession();
     state.session = null;
+    renderSessionNav();
     renderAll();
+    dom.loginForm.reset();
+    dom.registerForm.reset();
+    dom.registerBalance.value = 1000;
+    resetAvatarSelection();
+    setActiveView("home");
     setFeedback("Sessao encerrada.", "success", true);
   }
 
   function persistSession(session) {
     localStorage.setItem("cicbet.session", JSON.stringify(session));
+  }
+
+  function persistThemePreference(theme) {
+    localStorage.setItem(themeStorageKey, theme);
   }
 
   function clearSession() {
@@ -1216,17 +1122,51 @@
     }
   }
 
+  function loadThemePreference() {
+    try {
+      const theme = localStorage.getItem(themeStorageKey);
+      return theme === "light" ? "light" : "dark";
+    } catch (error) {
+      return "dark";
+    }
+  }
+
+  async function fetchJson(url, options = {}) {
+    const response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      },
+      ...options
+    });
+
+    const text = await response.text();
+    const payload = text ? JSON.parse(text) : {};
+
+    if (!response.ok) {
+      throw new Error(payload.message || "Falha na requisicao.");
+    }
+
+    return payload;
+  }
+
   function setFeedback(message, tone, autoHide) {
     dom.globalFeedback.textContent = message;
-    dom.globalFeedback.className = `alert ${tone || "subtle"}`;
+    dom.globalFeedback.className = `alert ${tone || "info"}`;
     dom.globalFeedback.classList.remove("hidden");
 
     if (autoHide) {
       window.clearTimeout(setFeedback.timeoutId);
       setFeedback.timeoutId = window.setTimeout(() => {
         dom.globalFeedback.classList.add("hidden");
-      }, 3500);
+      }, 3000);
     }
+  }
+
+  function clearFeedback() {
+    window.clearTimeout(setFeedback.timeoutId);
+    dom.globalFeedback.classList.add("hidden");
+    dom.globalFeedback.textContent = "";
   }
 
   function showConfigError(message) {
@@ -1235,8 +1175,115 @@
     dom.configAlert.classList.remove("hidden");
   }
 
-  function emptyCard(message) {
-    return `<div class="empty-card">${escapeHtml(message)}</div>`;
+  function emptyState(message) {
+    return `<div class="empty-state">${escapeHtml(message)}</div>`;
+  }
+
+  function applyTheme(theme, persist) {
+    const resolvedTheme = theme === "light" ? "light" : "dark";
+    state.theme = resolvedTheme;
+    document.body.dataset.theme = resolvedTheme;
+    renderThemeToggleButton();
+
+    if (persist) {
+      persistThemePreference(resolvedTheme);
+    }
+  }
+
+  function renderThemeToggleButton() {
+    if (!dom.themeToggleButton) {
+      return;
+    }
+
+    const nextTheme = state.theme === "dark" ? "light" : "dark";
+    const label = nextTheme === "dark" ? "Ativar modo escuro" : "Ativar modo claro";
+    dom.themeToggleButton.setAttribute("aria-label", label);
+    dom.themeToggleButton.setAttribute("title", label);
+  }
+
+  function renderAvatarUploadState() {
+    const customSelected = isCustomAvatar(selectedAvatar);
+    dom.avatarUploadButton.textContent = customSelected ? "Trocar minha foto" : "Usar minha foto";
+    dom.avatarResetButton.classList.toggle("hidden", !customSelected);
+    dom.avatarUploadHint.textContent = customSelected
+      ? "Sua foto foi ajustada para o formato de avatar. Voce pode trocar ou voltar para um avatar da arena."
+      : "PNG, JPG, WEBP ou GIF. A imagem sera recortada e ajustada automaticamente para o avatar.";
+  }
+
+  function resetAvatarSelection() {
+    selectedAvatar = avatarOptions[0];
+    dom.registerAvatarUpload.value = "";
+    renderAvatarPicker();
+  }
+
+  function isCustomAvatar(value) {
+    return String(value || "").startsWith("data:image/");
+  }
+
+  function validateAvatarFile(file) {
+    if (!avatarUploadTypes.has(file.type)) {
+      throw new Error("Use uma imagem PNG, JPG, WEBP ou GIF para o avatar.");
+    }
+
+    if (file.size > maxAvatarUploadSize) {
+      throw new Error("A foto do avatar deve ter no maximo 5 MB.");
+    }
+  }
+
+  async function buildAvatarDataUrl(file) {
+    const source = await readFileAsDataUrl(file);
+    const image = await loadImage(source);
+    const cropSize = Math.min(image.naturalWidth || image.width, image.naturalHeight || image.height);
+    const offsetX = Math.max(0, ((image.naturalWidth || image.width) - cropSize) / 2);
+    const offsetY = Math.max(0, ((image.naturalHeight || image.height) - cropSize) / 2);
+    const canvas = document.createElement("canvas");
+
+    canvas.width = avatarOutputSize;
+    canvas.height = avatarOutputSize;
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Nao foi possivel preparar a imagem do avatar.");
+    }
+
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(
+      image,
+      offsetX,
+      offsetY,
+      cropSize,
+      cropSize,
+      0,
+      0,
+      avatarOutputSize,
+      avatarOutputSize
+    );
+
+    const dataUrl = canvas.toDataURL("image/jpeg", avatarOutputQuality);
+    if (dataUrl.length > maxAvatarDataUrlLength) {
+      throw new Error("A foto ficou muito pesada. Tente uma imagem mais simples ou menor.");
+    }
+
+    return dataUrl;
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("Nao foi possivel ler a imagem escolhida."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("A imagem escolhida nao pode ser usada como avatar."));
+      image.src = src;
+    });
   }
 
   function escapeHtml(value) {
@@ -1248,26 +1295,21 @@
       .replaceAll("'", "&#39;");
   }
 
-  function capitalize(value) {
-    if (!value) {
-      return "";
-    }
-    return String(value).charAt(0).toUpperCase() + String(value).slice(1);
+  function formatCharacterCodename(slug) {
+    return String(slug || "")
+      .split("-")
+      .map((part) => part.toUpperCase())
+      .join(" / ");
   }
 
   function formatPoints(value) {
     return new Intl.NumberFormat("pt-BR").format(Number(value || 0));
   }
 
-  function formatPercent(value) {
-    return Number(value || 0).toFixed(1);
-  }
-
   function formatDateTime(value) {
-    const date = new Date(value);
     return new Intl.DateTimeFormat("pt-BR", {
       dateStyle: "short",
       timeStyle: "short"
-    }).format(date);
+    }).format(new Date(value));
   }
 })();

@@ -1,9 +1,27 @@
 <svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="640" height="420" rx="36" fill="#172554"/>
-  <path d="M72 338C72 285.533 114.533 243 167 243H471C523.467 243 566 285.533 566 338V354H72V338Z" fill="#DBEAFE"/>
-  <circle cx="320" cy="146" r="74" fill="#EFF6FF"/>
-  <rect x="238" y="100" width="164" height="42" rx="21" fill="#2563EB"/>
-  <path d="M274 88L320 54L366 88" stroke="#60A5FA" stroke-width="18" stroke-linecap="round"/>
-  <text x="48" y="66" fill="#EFF6FF" font-family="Arial, sans-serif" font-size="34" font-weight="700">Captain Loop</text>
-  <text x="48" y="100" fill="#93C5FD" font-family="Arial, sans-serif" font-size="18">Consistencia para sustentar streaks</text>
+  <defs>
+    <linearGradient id="loop-bg" x1="70" y1="40" x2="570" y2="390" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#10224A"/>
+      <stop offset="1" stop-color="#1D4ED8"/>
+    </linearGradient>
+    <linearGradient id="loop-armor" x1="212" y1="222" x2="444" y2="366" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#EFF6FF"/>
+      <stop offset="1" stop-color="#BFDBFE"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="36" fill="url(#loop-bg)"/>
+  <circle cx="114" cy="92" r="96" fill="#60A5FA" fill-opacity="0.22"/>
+  <circle cx="520" cy="334" r="122" fill="#93C5FD" fill-opacity="0.16"/>
+  <path d="M210 344C210 278.83 262.83 226 328 226H334C399.17 226 452 278.83 452 344V354H210V344Z" fill="url(#loop-armor)"/>
+  <circle cx="320" cy="144" r="72" fill="#F8FAFC"/>
+  <path d="M252 134C258 88 294 58 338 58C375 58 407 78 420 114C400 100 374 92 342 92C304 92 274 106 252 134Z" fill="#1E40AF"/>
+  <path d="M280 110H360" stroke="#93C5FD" stroke-width="14" stroke-linecap="round"/>
+  <path d="M320 74V148" stroke="#E0F2FE" stroke-width="10" stroke-linecap="round"/>
+  <circle cx="290" cy="156" r="9" fill="#1E3A8A"/>
+  <circle cx="350" cy="156" r="9" fill="#1E3A8A"/>
+  <path d="M300 186C306.5 191.333 313.167 194 320 194C326.833 194 333.5 191.333 340 186" stroke="#1D4ED8" stroke-width="6" stroke-linecap="round"/>
+  <path d="M466 86C496 102 514 128 520 164" stroke="#BFDBFE" stroke-width="7" stroke-linecap="round"/>
+  <path d="M482 70L466 86L490 96" stroke="#BFDBFE" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="46" y="64" fill="#EFF6FF" font-family="Bahnschrift, Arial, sans-serif" font-size="34" font-weight="700">Captain Loop Zero</text>
+  <text x="46" y="98" fill="#BFDBFE" font-family="Arial, sans-serif" font-size="18">controle absoluto e streaks longos</text>
 </svg>

@@ -1,10 +1,27 @@
 <svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="640" height="420" rx="36" fill="#431407"/>
-  <circle cx="482" cy="112" r="96" fill="#FB923C" fill-opacity="0.24"/>
-  <path d="M208 342C208 279.039 259.039 228 322 228V228C384.961 228 436 279.039 436 342V346H208V342Z" fill="#FFF7ED"/>
-  <circle cx="320" cy="146" r="74" fill="#FED7AA"/>
-  <path d="M244 132L276 80L304 126" fill="#7C2D12"/>
-  <path d="M396 132L364 80L336 126" fill="#7C2D12"/>
-  <text x="48" y="66" fill="#FFF7ED" font-family="Arial, sans-serif" font-size="34" font-weight="700">Nova Lynx</text>
-  <text x="48" y="100" fill="#FDBA74" font-family="Arial, sans-serif" font-size="18">Velocidade e instinto competitivo</text>
+  <defs>
+    <linearGradient id="nova-bg" x1="92" y1="34" x2="552" y2="394" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#431407"/>
+      <stop offset="1" stop-color="#7C2D12"/>
+    </linearGradient>
+    <linearGradient id="nova-coat" x1="214" y1="220" x2="440" y2="362" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFF7ED"/>
+      <stop offset="1" stop-color="#FED7AA"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="36" fill="url(#nova-bg)"/>
+  <circle cx="526" cy="88" r="104" fill="#FB923C" fill-opacity="0.24"/>
+  <circle cx="126" cy="320" r="132" fill="#FDBA74" fill-opacity="0.16"/>
+  <path d="M194 342C194 276.83 246.83 224 312 224H336C401.17 224 454 276.83 454 342V354H194V342Z" fill="url(#nova-coat)"/>
+  <circle cx="320" cy="146" r="74" fill="#FFF7ED"/>
+  <path d="M248 132L278 70L308 126" fill="#7C2D12"/>
+  <path d="M392 132L362 70L332 126" fill="#7C2D12"/>
+  <path d="M250 132C271 100 298 84 332 84C366 84 391 98 408 126L390 156C375 140 354 132 326 132C296 132 274 141 258 160L250 132Z" fill="#EA580C"/>
+  <circle cx="288" cy="156" r="9" fill="#431407"/>
+  <circle cx="352" cy="156" r="9" fill="#431407"/>
+  <path d="M302 186C308 193.333 314 197 320 197C326 197 332 193.333 338 186" stroke="#7C2D12" stroke-width="6" stroke-linecap="round"/>
+  <path d="M142 98L190 116" stroke="#FDBA74" stroke-width="6" stroke-linecap="round"/>
+  <path d="M160 72L198 96" stroke="#FDBA74" stroke-width="6" stroke-linecap="round"/>
+  <text x="46" y="64" fill="#FFF7ED" font-family="Bahnschrift, Arial, sans-serif" font-size="34" font-weight="700">Nova Lynx Prime</text>
+  <text x="46" y="98" fill="#FDBA74" font-family="Arial, sans-serif" font-size="18">instinto de caça e ritmo explosivo</text>
 </svg>

@@ -1,10 +1,30 @@
 <svg width="640" height="420" viewBox="0 0 640 420" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <rect width="640" height="420" rx="36" fill="#0F172A"/>
-  <circle cx="483" cy="96" r="86" fill="#14B8A6" fill-opacity="0.24"/>
-  <circle cx="160" cy="320" r="120" fill="#2DD4BF" fill-opacity="0.18"/>
-  <path d="M122 292C122 235.667 167.667 190 224 190H320C376.333 190 422 235.667 422 292V336H122V292Z" fill="#E2E8F0"/>
-  <circle cx="272" cy="146" r="66" fill="#F8FAFC"/>
-  <path d="M206 146C206 109.549 235.549 80 272 80V80C308.451 80 338 109.549 338 146V146H206V146Z" fill="#14B8A6"/>
-  <text x="48" y="66" fill="#F8FAFC" font-family="Arial, sans-serif" font-size="34" font-weight="700">Aurora Pulse</text>
-  <text x="48" y="100" fill="#94A3B8" font-family="Arial, sans-serif" font-size="18">Leitura rapida e energia constante</text>
+  <defs>
+    <linearGradient id="aurora-bg" x1="68" y1="48" x2="554" y2="388" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#081A19"/>
+      <stop offset="1" stop-color="#13312E"/>
+    </linearGradient>
+    <linearGradient id="aurora-robe" x1="236" y1="198" x2="404" y2="358" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DFFFF7"/>
+      <stop offset="1" stop-color="#7DE9D0"/>
+    </linearGradient>
+    <linearGradient id="aurora-hair" x1="270" y1="92" x2="356" y2="176" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#6EF8D5"/>
+      <stop offset="1" stop-color="#14B8A6"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="36" fill="url(#aurora-bg)"/>
+  <circle cx="124" cy="102" r="108" fill="#0F766E" fill-opacity="0.22"/>
+  <circle cx="548" cy="344" r="128" fill="#34D399" fill-opacity="0.16"/>
+  <path d="M82 314C150 286 214 272 274 272C344 272 412 294 476 338" stroke="#5EEAD4" stroke-opacity="0.22" stroke-width="10" stroke-linecap="round"/>
+  <path d="M192 338C192 272.771 244.771 220 310 220H330C395.229 220 448 272.771 448 338V354H192V338Z" fill="url(#aurora-robe)"/>
+  <circle cx="320" cy="144" r="72" fill="#F8FFFD"/>
+  <path d="M252 132C252 86.7126 288.713 50 334 50C365.168 50 392.271 67.3737 406 92.9502C390.649 86.3167 371.237 82 348 82C306.792 82 270.997 98.6837 252 132Z" fill="url(#aurora-hair)"/>
+  <path d="M244 156C260 126 292 108 336 108C372 108 401 119 424 144L398 158C382 146 362 140 340 140C304 140 275 152 254 174L244 156Z" fill="#0D9488"/>
+  <path d="M280 160C294 154 307 151 320 151C333 151 346 154 360 160" stroke="#164E63" stroke-width="7" stroke-linecap="round"/>
+  <path d="M298 183C307.5 188.333 314.833 191 320 191C325.167 191 332.5 188.333 342 183" stroke="#0F766E" stroke-width="6" stroke-linecap="round"/>
+  <path d="M236 84L266 64L290 88" stroke="#99F6E4" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M380 72L408 88L388 116" stroke="#5EEAD4" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="46" y="64" fill="#F0FDFA" font-family="Bahnschrift, Arial, sans-serif" font-size="34" font-weight="700">Aurora Vanta</text>
+  <text x="46" y="98" fill="#99F6E4" font-family="Arial, sans-serif" font-size="18">oraculo de leitura instantanea</text>
 </svg>

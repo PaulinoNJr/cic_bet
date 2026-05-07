@@ -1,0 +1,14 @@
+{
+  "name": "cic-bet-arena",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js",
+    "check": "node --check server.js && node --check app.js && node --check api/config.js && node --check api/bootstrap.js && node --check api/auth-login.js && node --check api/auth-register.js && node --check api/bets-create.js && node --check api/bets-delete.js && node --check api/predictions-create.js && node --check api/combos-create.js && node --check api/bets-resolve.js && node --check api/_lib/db.js && node --check api/_lib/http.js && node --check api/_lib/game.js && node --check api/_lib/repository.js && node --check api/_lib/characters.js && node --check api/_lib/users.js"
+  }
+}
